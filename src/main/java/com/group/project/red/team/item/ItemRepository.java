@@ -1,5 +1,7 @@
 package com.group.project.red.team.item;
 
-public interface ItemRepository {
+import org.springframework.data.repository.CrudRepository;
+
+public interface ItemRepository extends CrudRepository<Item, Integer> {
 
 }
