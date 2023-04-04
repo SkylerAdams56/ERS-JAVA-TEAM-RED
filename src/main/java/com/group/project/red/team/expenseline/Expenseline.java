@@ -22,7 +22,7 @@ public class Expenseline {
 	
 	@ManyToOne(optional=false)
 	@JoinColumn(name="itemId")
-	private Expense item;
+	private Item item;
 	
 	public Expenseline() {}
 
@@ -50,11 +50,11 @@ public class Expenseline {
 		this.expense = expense;
 	}
 
-	public Expense getItem() {
+	public Item getItem() {
 		return item;
 	}
 
-	public void setItem(Expense item) {
+	public void setItem(Item item) {
 		this.item = item;
 	}
 	
