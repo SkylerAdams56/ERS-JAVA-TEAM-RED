@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.group.project.red.team.employee.*;
 
 
 @CrossOrigin
@@ -18,9 +18,30 @@ public class ExpenseController {
 	private final String Status_Review = "REVIEW";
 	private final String Status_Approved = "APPROVED";
 	private final String Status_Rejected = "REJECTED";
+	private final String Status_Paid = "PAID";
+	private final String Status_Due = "DUE";
 	
 	@Autowired
 	private ExpenseRepository expRepo;
+	private EmployeeRepository empRepo;
+	
+	//UpdateEmployeeExpensesDueAndPaid(employeeId)
+	@SuppressWarnings("rawtypes")
+	private boolean UpdateEmployeeExpensesDueAndPaid(@PathVariable int employeeId) {
+		Optional<Expense> putEmployeeExpensesDueAndPaid = expRepo.findById(employeeId);
+		if(putEmployeeExpensesDueAndPaid.isEmpty()) {
+			return false;
+		}
+		//possible instance on this line
+		Optional<Employee> employees = empRepo.findById(employeeId);
+		Iterable<Expense> employeeDueTotal = expRepo.findAllByStatus(Status_Due);
+		Iterable<Expense> employeePaidTotal = expRepo.findAllByStatus(Status_Paid);
+		
+		
+	}
+	
+	
+	
 	
 	@GetMapping("reviews")
 	public ResponseEntity<Iterable<Expense>> GetExpensesInReview(){
@@ -59,15 +80,25 @@ public class ExpenseController {
 	}
 	
 	//PayExpense(expenseId)
-	
-	
-	
-	
-	//UpdateEmployeeExpensesDueAndPaid(employeeId)
-	
-	
-	
-	
+	@SuppressWarnings("rawtypes")
+	@PutMapping("pay/{expenseId}")
+	public ResponseEntity PayExpense(@PathVariable int expenseId, @RequestBody Expense expense) {
+		Optional<Expense> payExpenses = expRepo.findById(expenseId);
+		if(expense.getId() != expenseId) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
+		payExpenses.get().setStatus(Status_Paid);
+		Optional<Employee> getEmployee = empRepo.findById(expense.getEmployee().getId());
+		getEmployee.get().setExpensesPaid(payExpenses.get().getTotal());
+		if(getEmployee.get().getExpensesDue() - payExpenses.get().getTotal() < 0) {
+			getEmployee.get().setExpensesDue(0);
+		}
+		else {
+			getEmployee.get().setExpensesDue(getEmployee.get().getExpensesDue() - payExpenses.get().getTotal());
+		}
+		putExpense(expenseId, payExpenses.get());
+		return new ResponseEntity(HttpStatus.NO_CONTENT);
+	}
 	
 	
 	@SuppressWarnings("rawtypes")

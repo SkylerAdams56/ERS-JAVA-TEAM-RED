@@ -10,5 +10,7 @@ public interface ExpenseRepository extends CrudRepository<Expense,Integer>{
 	Iterable<Expense> findAll();
 
 	Optional<Expense> findById(int id);
+
+	Iterable<Expense> findAllByStatus(String status_Paid);
 	
 }
