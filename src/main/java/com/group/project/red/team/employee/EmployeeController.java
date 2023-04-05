@@ -22,6 +22,15 @@ public class EmployeeController {
 	@Autowired
 	private EmployeeRepository employeeRepo;
 	
+	@GetMapping("{email}/{password}")
+	public ResponseEntity<Employee> getEmployeeByEmailAndPassword(@PathVariable String email, @PathVariable String password) {
+		Optional<Employee> employeeByEmailAndPassword = employeeRepo.findByEmailAndPassword(email, password);
+		if(employeeByEmailAndPassword.isEmpty()) {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+		return new ResponseEntity<Employee>(employeeByEmailAndPassword.get(), HttpStatus.OK);
+	}
+	
 	@GetMapping
 	public ResponseEntity<Iterable<Employee>> getEmployees() {
 		Iterable<Employee> employees = employeeRepo.findAll();
