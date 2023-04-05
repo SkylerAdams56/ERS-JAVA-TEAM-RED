@@ -29,8 +29,11 @@ public class ExpenseController {
 	}
 	
 	//GetApprovedExpenses
-	
-	
+	@GetMapping("approved")
+	public ResponseEntity<Iterable<Expense>> GetApprovedExpenses(){
+		Iterable<Expense> ApprovedExpenses = expRepo.findByStatus(Status_Approved);
+		return new ResponseEntity<Iterable<Expense>>(ApprovedExpenses, HttpStatus.OK);
+	}
 	
 	
 	
