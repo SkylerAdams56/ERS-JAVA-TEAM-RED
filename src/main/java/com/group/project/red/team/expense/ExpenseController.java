@@ -26,22 +26,24 @@ public class ExpenseController {
 	private EmployeeRepository empRepo;
 	
 	//UpdateEmployeeExpensesDueAndPaid(employeeId)
-	@SuppressWarnings("rawtypes")
-	private boolean UpdateEmployeeExpensesDueAndPaid(@PathVariable int employeeId) {
+	private boolean UpdateEmployeeExpensesDueAndPaid(int employeeId) {
 		Optional<Expense> putEmployeeExpensesDueAndPaid = expRepo.findById(employeeId);
 		if(putEmployeeExpensesDueAndPaid.isEmpty()) {
 			return false;
 		}
-		//possible instance on this line
-		Optional<Employee> employees = empRepo.findById(employeeId);
-		Iterable<Expense> employeeDueTotal = expRepo.findAllByStatus(Status_Due);
-		Iterable<Expense> employeePaidTotal = expRepo.findAllByStatus(Status_Paid);
-		
-		
+		Optional<Employee> employee = empRepo.findById(employeeId);
+		Iterable<Expense> expenseByEmpId = expRepo.findByEmployeeId(employeeId);
+		double total;
+		for(Expense ex: expenseByEmpId) {
+			if(ex.getStatus() != Status_Paid) {
+				employee.get().setExpensesDue(ex.getTotal() + employee.get().getExpensesDue());
+			}
+			if(ex.getStatus() == Status_Paid) {
+				employee.get().setExpensesPaid(ex.getTotal() + employee.get().getExpensesPaid());
+			}
+		}
+		return true;
 	}
-	
-	
-	
 	
 	@GetMapping("reviews")
 	public ResponseEntity<Iterable<Expense>> GetExpensesInReview(){
@@ -76,6 +78,10 @@ public class ExpenseController {
 	@PostMapping
 	public ResponseEntity<Expense> postExpense(@RequestBody Expense Expense){
 		Expense newExpense = expRepo.save(Expense);
+		boolean success = UpdateEmployeeExpensesDueAndPaid(Expense.getEmployee().getId());
+		if(!success) {
+			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+		}
 		return new ResponseEntity<Expense>(newExpense, HttpStatus.CREATED);
 	}
 	
@@ -130,6 +136,10 @@ public class ExpenseController {
 			return new ResponseEntity(HttpStatus.BAD_REQUEST);
 		}
 		expRepo.save(Expense);
+		boolean success = UpdateEmployeeExpensesDueAndPaid(Expense.getEmployee().getId());
+		if(!success) {
+			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+		}
 		return new ResponseEntity(HttpStatus.NO_CONTENT);
 	}
 
@@ -141,6 +151,10 @@ public class ExpenseController {
 			return new ResponseEntity(HttpStatus.NOT_FOUND);
 		}
 		expRepo.delete(Expense.get());
+		boolean success = UpdateEmployeeExpensesDueAndPaid(Expense.get().getEmployee().getId());
+		if(!success) {
+			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+		}
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 }
