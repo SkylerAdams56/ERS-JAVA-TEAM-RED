@@ -1,46 +1,47 @@
 package com.group.project.red.team.expense;
 
+import com.group.project.red.team.employee.Employee;
+import com.group.project.red.team.employee.EmployeeRepository;
 import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.group.project.red.team.employee.*;
-
 
 @CrossOrigin
 @RestController
 @RequestMapping("/api/expenses")
 public class ExpenseController {
 
-	private final String Status_New = "NEW";
 	private final String Status_Review = "REVIEW";
 	private final String Status_Approved = "APPROVED";
 	private final String Status_Rejected = "REJECTED";
 	private final String Status_Paid = "PAID";
-	private final String Status_Due = "DUE";
 	
 	@Autowired
 	private ExpenseRepository expRepo;
+	
+	@Autowired
 	private EmployeeRepository empRepo;
 	
-	//UpdateEmployeeExpensesDueAndPaid(employeeId)
-	private boolean UpdateEmployeeExpensesDueAndPaid(int employeeId) {
-		Optional<Expense> putEmployeeExpensesDueAndPaid = expRepo.findById(employeeId);
-		if(putEmployeeExpensesDueAndPaid.isEmpty()) {
-			return false;
-		}
-		Optional<Employee> employee = empRepo.findById(employeeId);
-		Iterable<Expense> expenseByEmpId = expRepo.findByEmployeeId(employeeId);
-		double total;
-		for(Expense ex: expenseByEmpId) {
-			if(ex.getStatus() != Status_Paid) {
-				employee.get().setExpensesDue(ex.getTotal() + employee.get().getExpensesDue());
+	private boolean updateEmployeeExpensesDueAndPaid(int employeeId) {
+		Iterable<Expense> expensesByEmployeeId = expRepo.findByEmployeeId(employeeId);
+		double expensesDue = 0;
+		double expensesPaid = 0;
+		for(Expense expense : expensesByEmployeeId) {
+			if(expense.getEmployee().getName() == null) {
+				Employee employee = empRepo.findById(expense.getEmployee().getId()).get();
+				expense.setEmployee(employee);
 			}
-			if(ex.getStatus() == Status_Paid) {
-				employee.get().setExpensesPaid(ex.getTotal() + employee.get().getExpensesPaid());
+			if(!expense.getStatus().equals(Status_Paid)) {
+				expensesDue += expense.getTotal();
+				expense.getEmployee().setExpensesDue(expensesDue);
 			}
+			if(expense.getStatus().equals(Status_Paid)) {
+				expensesPaid += expense.getTotal();
+				expense.getEmployee().setExpensesPaid(expensesPaid);
+			}
+			expRepo.save(expense);
 		}
 		return true;
 	}
@@ -57,8 +58,6 @@ public class ExpenseController {
 		Iterable<Expense> ApprovedExpenses = expRepo.findByStatus(Status_Approved);
 		return new ResponseEntity<Iterable<Expense>>(ApprovedExpenses, HttpStatus.OK);
 	}
-	
-	
 	
 	@GetMapping
 	public ResponseEntity<Iterable<Expense>> getExpenses(){
@@ -78,34 +77,25 @@ public class ExpenseController {
 	@PostMapping
 	public ResponseEntity<Expense> postExpense(@RequestBody Expense Expense){
 		Expense newExpense = expRepo.save(Expense);
-		boolean success = UpdateEmployeeExpensesDueAndPaid(Expense.getEmployee().getId());
-		if(!success) {
-			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-		}
+		updateEmployeeExpensesDueAndPaid(Expense.getEmployee().getId());
 		return new ResponseEntity<Expense>(newExpense, HttpStatus.CREATED);
 	}
 	
-	//PayExpense(expenseId)
 	@SuppressWarnings("rawtypes")
 	@PutMapping("pay/{expenseId}")
-	public ResponseEntity PayExpense(@PathVariable int expenseId, @RequestBody Expense expense) {
-		Optional<Expense> payExpenses = expRepo.findById(expenseId);
-		if(expense.getId() != expenseId) {
-			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+	public ResponseEntity payExpense(@PathVariable int expenseId) {
+		Optional<Expense> expenseToPay = expRepo.findById(expenseId);
+		Employee employee = expenseToPay.get().getEmployee();
+		expenseToPay.get().setStatus("PAID");
+		double expenseTotal = expenseToPay.get().getTotal();
+		employee.setExpensesPaid(employee.getExpensesPaid() + expenseTotal);
+		if(employee.getExpensesDue() - expenseTotal < 0) {
+			employee.setExpensesDue(0);
 		}
-		payExpenses.get().setStatus(Status_Paid);
-		Optional<Employee> getEmployee = empRepo.findById(expense.getEmployee().getId());
-		getEmployee.get().setExpensesPaid(payExpenses.get().getTotal());
-		if(getEmployee.get().getExpensesDue() - payExpenses.get().getTotal() < 0) {
-			getEmployee.get().setExpensesDue(0);
-		}
-		else {
-			getEmployee.get().setExpensesDue(getEmployee.get().getExpensesDue() - payExpenses.get().getTotal());
-		}
-		putExpense(expenseId, payExpenses.get());
-		return new ResponseEntity(HttpStatus.NO_CONTENT);
+		employee.setExpensesDue(employee.getExpensesDue() - expenseTotal);
+		putExpense(expenseToPay.get().getId(), expenseToPay.get());
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
-	
 	
 	@SuppressWarnings("rawtypes")
 	@PutMapping("review/{id}")
@@ -136,25 +126,19 @@ public class ExpenseController {
 			return new ResponseEntity(HttpStatus.BAD_REQUEST);
 		}
 		expRepo.save(Expense);
-		boolean success = UpdateEmployeeExpensesDueAndPaid(Expense.getEmployee().getId());
-		if(!success) {
-			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-		}
+		updateEmployeeExpensesDueAndPaid(Expense.getEmployee().getId());
 		return new ResponseEntity(HttpStatus.NO_CONTENT);
 	}
 
 	@SuppressWarnings("rawtypes")
 	@DeleteMapping("{id}")
 	public ResponseEntity deleteExpense(@PathVariable int id) {
-		Optional<Expense> Expense = expRepo.findById(id);
-		if(Expense.isEmpty()) {
+		Optional<Expense> expense = expRepo.findById(id);
+		if(expense.isEmpty()) {
 			return new ResponseEntity(HttpStatus.NOT_FOUND);
 		}
-		expRepo.delete(Expense.get());
-		boolean success = UpdateEmployeeExpensesDueAndPaid(Expense.get().getEmployee().getId());
-		if(!success) {
-			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-		}
+		expRepo.delete(expense.get());
+		updateEmployeeExpensesDueAndPaid(expense.get().getEmployee().getId());
 		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 }

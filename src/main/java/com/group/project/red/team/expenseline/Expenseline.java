@@ -13,15 +13,16 @@ public class Expenseline {
 	@Id
 	@GeneratedValue(strategy=GenerationType.IDENTITY)
 	private int id;
+	
 	private int quantity;
 	
 	@JsonBackReference
 	@ManyToOne(optional=false)
-	@JoinColumn(name="expenseId")
+	@JoinColumn(name="expenseId", columnDefinition="INT")
 	private Expense expense;
 	
 	@ManyToOne(optional=false)
-	@JoinColumn(name="itemId")
+	@JoinColumn(name="itemId", columnDefinition="INT")
 	private Item item;
 	
 	public Expenseline() {}

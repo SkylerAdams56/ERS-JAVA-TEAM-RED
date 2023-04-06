@@ -1,24 +1,35 @@
 package com.group.project.red.team.expense;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.group.project.red.team.employee.Employee;
-
+import com.group.project.red.team.expenseline.Expenseline;
 import jakarta.persistence.*;
+import java.util.List;
+
 @Entity
-@Table(name="expenses")
+@Table(name="Expenses")
 public class Expense {
 	
 	@Id
 	@GeneratedValue(strategy=GenerationType.IDENTITY)
 	private int id;
+	
 	@Column(length=80, nullable=false)
 	private String description;
+	
 	@Column(length=10, nullable=false)
 	private String status;
+	
 	@Column(columnDefinition="decimal (11,2) not null default 0")
 	private double total;
+	
 	@ManyToOne(optional=false)
-	@JoinColumn(name="employeeId")
+	@JoinColumn(name="employeeId", columnDefinition="INT")
 	private Employee employee;
+	
+	@JsonManagedReference
+	@OneToMany(mappedBy="expense")
+	private List<Expenseline> expenselines;
 	
 	public Expense() {}
 	
@@ -51,6 +62,14 @@ public class Expense {
 	}
 	public void setEmployee(Employee employee) {
 		this.employee = employee;
+	}
+
+	public List<Expenseline> getExpenselines() {
+		return expenselines;
+	}
+
+	public void setExpenselines(List<Expenseline> expenselines) {
+		this.expenselines = expenselines;
 	}
 	
 }
