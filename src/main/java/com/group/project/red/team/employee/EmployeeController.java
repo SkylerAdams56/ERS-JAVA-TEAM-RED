@@ -37,7 +37,7 @@ public class EmployeeController {
 		return new ResponseEntity<Iterable<Employee>>(employees, HttpStatus.OK);
 	}
 	
-	@GetMapping("id")
+	@GetMapping("{id}")
 	public ResponseEntity<Employee> getEmployee(@PathVariable int id) {
 		Optional<Employee> employee = employeeRepo.findById(id);
 		if(employee.isEmpty()) {
@@ -53,7 +53,7 @@ public class EmployeeController {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	@PutMapping("id")
+	@PutMapping("{id}")
 	public ResponseEntity putEmployee(@PathVariable int id, @RequestBody Employee employee) {
 		if(employee.getId() != id) {
 			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -63,7 +63,7 @@ public class EmployeeController {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	@DeleteMapping("id")
+	@DeleteMapping("{id}")
 	public ResponseEntity deleteEmployee(@PathVariable int id) {
 		Optional<Employee> employeeToDelete = employeeRepo.findById(id);
 		if(employeeToDelete.isEmpty()) {
